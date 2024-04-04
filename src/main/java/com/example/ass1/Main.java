@@ -1,46 +1,23 @@
 package com.example.ass1;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Scanner;
-import java.io.*;
-import javax.swing.*;
-import java.awt.event.*;
 
 
 public class Main {
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                showFileChooser();
-            }
-        });
-    }
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter the file path (do not use quote marks): ");
+        String filePath = scanner.nextLine();
+        scanner.close();
 
-    private static void showFileChooser() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Choose a file for encryption");
-        int userSelection = fileChooser.showOpenDialog(null);
+        EncryptionDecryptionApp example = new EncryptionDecryptionApp();
+        example.performEncryptionDecryption(filePath);
 
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            String filePath = selectedFile.getAbsolutePath();
-            showKeyDirectoryChooser(filePath);
-        }
-    }
-
-    private static void showKeyDirectoryChooser(String filePath) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Choose a directory to save the key file");
-        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        int userSelection = fileChooser.showSaveDialog(null);
-
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            File selectedDirectory = fileChooser.getSelectedFile();
-            String keyDirectory = selectedDirectory.getAbsolutePath();
-            EncryptionDecryptionApp example = new EncryptionDecryptionApp();
-            example.performEncryptionDecryption(filePath, keyDirectory);
-        }
     }
 }
 
@@ -49,7 +26,7 @@ class EncryptionDecryptionApp {
     // Define AES encryption key
     private static final byte[] AES_KEY = generateAESKey();
 
-    public void performEncryptionDecryption(String filePath, String keyDirectory) {
+    public void performEncryptionDecryption( String filePath) {
         try {
             // Read plaintext from the file
             String plaintext = readPlainTextFromFile(filePath);
@@ -58,20 +35,15 @@ class EncryptionDecryptionApp {
             byte[] encryptedBytes = encryptAES(plaintext);
             String encryptedText = base64Encode(encryptedBytes);
 
-            // Construct the new file path for encrypted file
-            String encryptedFilePath = constructEncryptedFilePath(filePath);
+            System.out.println("Encrypted text: " + encryptedText);
 
-            // Save encrypted text to a new file
-            saveToFile(encryptedFilePath, encryptedText);
+            // Decrypt the ciphertext
+            byte[] decryptedBytes = decryptAES(base64Decode(encryptedText));
+            String decryptedText = new String(decryptedBytes);
 
-            // Save the AES key to a file in the specified directory
-            String keyFilePath = constructKeyFilePath(keyDirectory);
-            saveKeyToFile(keyFilePath, AES_KEY);
-
-            // Display a message to the user
-            JOptionPane.showMessageDialog(null, "Your encrypted file is saved at: " + encryptedFilePath + "\nYour AES key is saved at: " + keyFilePath);
+            System.out.println("Decrypted text: " + decryptedText);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Exception occurred: " + e.getMessage());
+            System.out.println("Exception occurred: " + e.getMessage());
         }
     }
 
@@ -91,9 +63,23 @@ class EncryptionDecryptionApp {
         return plaintextBytes;
     }
 
+    // Decrypt ciphertext using AES
+    private static byte[] decryptAES(byte[] ciphertext) throws Exception {
+        byte[] decryptedBytes = new byte[ciphertext.length];
+        for (int i = 0; i < ciphertext.length; i++) {
+            decryptedBytes[i] = (byte) (ciphertext[i] ^ AES_KEY[i % AES_KEY.length]);
+        }
+        return decryptedBytes;
+    }
+
     // Base64 encode
     private static String base64Encode(byte[] bytes) {
         return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    // Base64 decode
+    private static byte[] base64Decode(String encodedText) {
+        return Base64.getDecoder().decode(encodedText);
     }
 
     // Read plaintext from a file
@@ -106,37 +92,5 @@ class EncryptionDecryptionApp {
             }
         }
         return sb.toString();
-    }
-
-    // Construct the path for the encrypted file
-    private static String constructEncryptedFilePath(String originalFilePath) {
-        // Extract the file name and directory
-        String directory = originalFilePath.substring(0, originalFilePath.lastIndexOf(File.separator) + 1);
-        String fileName = originalFilePath.substring(originalFilePath.lastIndexOf(File.separator) + 1);
-
-        // Append "Encrypted_" to the file name
-        String encryptedFileName = "Encrypted_" + fileName;
-
-        // Construct the encrypted file path
-        return directory + encryptedFileName;
-    }
-
-    // Construct the path for the key file
-    private static String constructKeyFilePath(String keyDirectory) {
-        return keyDirectory + File.separator + "key.txt";
-    }
-
-    // Save text to a file
-    private static void saveToFile(String filePath, String text) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-            writer.write(text);
-        }
-    }
-
-    // Save AES key to a file
-    private static void saveKeyToFile(String filePath, byte[] key) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(filePath)) {
-            fos.write(key);
-        }
     }
 }
