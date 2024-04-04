@@ -1,22 +1,22 @@
 package com.example.ass1;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Scanner;
+import java.io.*;
 
 
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter the file path (do not use quote marks): ");
+        System.out.print("Enter the file path for the text file: ");
         String filePath = scanner.nextLine();
+        System.out.print("Enter the directory path to save the key file: ");
+        String keyDirectory = scanner.nextLine();
         scanner.close();
-
+        
         EncryptionDecryptionApp example = new EncryptionDecryptionApp();
-        example.performEncryptionDecryption(filePath);
+        example.performEncryptionDecryption(filePath, keyDirectory);
 
     }
 }
@@ -26,7 +26,7 @@ class EncryptionDecryptionApp {
     // Define AES encryption key
     private static final byte[] AES_KEY = generateAESKey();
 
-    public void performEncryptionDecryption( String filePath) {
+    public void performEncryptionDecryption( String filePath, String keyDirectory) {
         try {
             // Read plaintext from the file
             String plaintext = readPlainTextFromFile(filePath);
@@ -35,7 +35,18 @@ class EncryptionDecryptionApp {
             byte[] encryptedBytes = encryptAES(plaintext);
             String encryptedText = base64Encode(encryptedBytes);
 
-            System.out.println("Encrypted text: " + encryptedText);
+            // Construct the new file path for encrypted file
+            String encryptedFilePath = constructEncryptedFilePath(filePath);
+
+            // Save encrypted text to a new file
+            saveToFile(encryptedFilePath, encryptedText);
+
+            // Save the AES key to a file
+            saveKeyToFile("key.txt", AES_KEY);
+
+            // Display a message to the user
+            System.out.println("Your encrypted file is saved at: " + encryptedFilePath);
+            System.out.println("Your AES key is saved at: key.txt");
 
             // Decrypt the ciphertext
             byte[] decryptedBytes = decryptAES(base64Decode(encryptedText));
@@ -92,5 +103,32 @@ class EncryptionDecryptionApp {
             }
         }
         return sb.toString();
+    }
+
+    // Construct the path for the encrypted file
+    private static String constructEncryptedFilePath(String originalFilePath) {
+        // Extract the file name and directory
+        String directory = originalFilePath.substring(0, originalFilePath.lastIndexOf("\\") + 1);
+        String fileName = originalFilePath.substring(originalFilePath.lastIndexOf("\\") + 1);
+
+        // Append "Encrypted_" to the file name
+        String encryptedFileName = "Encrypted_" + fileName;
+
+        // Construct the encrypted file path
+        return directory + encryptedFileName;
+    }
+
+    // Save text to a file
+    private static void saveToFile(String filePath, String text) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            writer.write(text);
+        }
+    }
+
+    // Save AES key to a file
+    private static void saveKeyToFile(String filePath, byte[] key) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            fos.write(key);
+        }
     }
 }
